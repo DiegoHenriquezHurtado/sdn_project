@@ -1,12 +1,12 @@
-db_host: localhost
-snort_log_path: /var/log/snort/alert
+#db_host: localhost
+#snort_log_path: /var/log/snort/alert
 
 db:
   host: localhost
   port: 3306
   user: root
-  password: password
-  database: sdn_db
+  password: root
+  database: db_sdn
 
 snort:
   alert_path: /var/log/snort/alert

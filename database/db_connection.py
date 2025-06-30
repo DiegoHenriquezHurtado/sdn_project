@@ -2,16 +2,33 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from database.models import Base
+import logging
 
-DB_USER = 'root'
-DB_PASSWORD = 'password'
-DB_HOST = 'localhost'
-DB_NAME = 'sdn_db'
+engine = None
+SessionLocal = None
 
-DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
+def init_db(db_config):
+    """
+    Inicializa la conexión a la base de datos usando la configuración del archivo YAML.
+    :param db_config: Diccionario con claves: host, port, user, password, database
+    """
+    global engine, SessionLocal
 
-engine = create_engine(DATABASE_URL, echo=True)
-SessionLocal = sessionmaker(bind=engine)
+    db_user = db_config['user']
+    db_password = db_config['password']
+    db_host = db_config['host']
+    db_port = db_config.get('port', 3306)
+    db_name = db_config['database']
 
-def init_db():
-    Base.metadata.create_all(bind=engine)
+    database_url = f"mysql+pymysql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+
+    try:
+        engine = create_engine(database_url, echo=False)
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        Base.metadata.create_all(bind=engine)
+        logging.info("Conexión a la base de datos inicializada correctamente.")
+        return SessionLocal
+    except Exception as e:
+        logging.error(f"Error al conectar a la base de datos: {e}")
+        raise e
+
