@@ -4,8 +4,8 @@
 db:
   host: localhost
   port: 3306
-  user: root
-  password: root
+  user: diego
+  password: Ubuntu2025*
   database: db_sdn
 
 snort:
@@ -15,3 +15,10 @@ floodlight:
   host: 127.0.0.1
   port: 8080
   base_api: /wm/staticflowentrypusher/json
+
+freeradius:
+  host: 127.0.0.1
+  port: 1812
+  secret: testing123
+  dictionary_path: config/dictionary
+

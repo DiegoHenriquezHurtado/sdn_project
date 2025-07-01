@@ -6,11 +6,11 @@ import yaml
 from database.db_connection import init_db, SessionLocal
 from database.models import Usuario  # Suponiendo que definas esto
 #from controller.controlador import ControladorSDN
-#from controller.auth_manager import AuthManager
+from controller.auth_manager import AuthManager
 #from controller.reglas_manager import ReglasManager
 #from controller.ddos_detector import DDoSDetector
 #from infrastructure.snort_listener import SnortListener
-#from app.portal_acceso import iniciar_portal
+from app.portal_acceso import iniciar_portal
 #from app.monitor_red import iniciar_monitor
 
 def cargar_configuracion():
@@ -40,7 +40,7 @@ def main():
 
     # 3. Inicializar controladores
     #controlador = ControladorSDN(cfg['floodlight'])
-    #auth_manager = AuthManager(cfg['freeradius'])
+    auth_manager = AuthManager(cfg['freeradius'])
     #reglas_manager = ReglasManager(controlador)
     #ddos_detector = DDoSDetector()
 
@@ -48,7 +48,7 @@ def main():
     #snort_listener = SnortListener(cfg['snort'], ddos_detector)
 
     # 5. Lanzar componentes en hilos separados si es necesario
-    #threading.Thread(target=iniciar_portal, args=(cfg,)).start()
+    threading.Thread(target=iniciar_portal, args=(cfg,)).start()
     #threading.Thread(target=snort_listener.escuchar_alertas).start()
     #threading.Thread(target=iniciar_monitor, args=(cfg,)).start()
 
