@@ -1,1 +1,0 @@
-# Ovs Handler module
