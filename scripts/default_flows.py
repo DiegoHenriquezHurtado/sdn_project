@@ -35,9 +35,6 @@ def get_attachment_point(host_mac):
         response = requests.get(DEVICE_API_URL, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
         
-        # CORRECCIÓN: Manejar los dos posibles formatos de la API de Floodlight:
-        # 1. Una lista directa de dispositivos: [...]
-        # 2. Un diccionario que contiene una lista: {"devices": [...]}
         parsed_json = response.json()
         if isinstance(parsed_json, dict):
             devices = parsed_json.get('devices', [])
@@ -45,7 +42,6 @@ def get_attachment_point(host_mac):
             devices = parsed_json
         
         for device in devices:
-            # Las MACs pueden estar en una lista
             if host_mac.upper() in [mac.upper() for mac in device.get('mac', [])]:
                 ap_list = device.get('attachmentPoint', [])
                 if ap_list:
@@ -70,61 +66,78 @@ def install_flow(flow_data):
     try:
         response = requests.post(STATIC_FLOW_URL, json=flow_data, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
-        print(f"      ... Estado: {response.json().get('status')}")
+        status = response.json().get('status', 'Sin estado devuelto')
+        if "Flow rule pushed" not in status:
+             print(f"      [!] Advertencia: Floodlight respondió: {status}")
+        else:
+             print(f"      ... Estado: {status}")
         return True
     except requests.RequestException as e:
-        print(f"      [!] Error al instalar el flujo: {e}", file=sys.stderr)
+        print(f"      [!] Error al instalar el flujo: {e.response.text if e.response else 'No response'}", file=sys.stderr)
         return False
 
 def setup_quarantine_for_host(host_mac, dpid):
     """
-    Define e instala las tres reglas de flujo de cuarentena para un host en un switch específico.
+    Define e instala las tres reglas de flujo de cuarentena para un host en un switch específico
+    usando el formato OpenFlow 1.3.
     """
     print(f"\n[*] Configurando flujos de cuarentena para {HOSTS_A_BLOQUEAR.get(host_mac, host_mac)} en el switch {dpid}")
 
     # Regla 1: Permitir tráfico hacia el servidor RADIUS (UDP/1812)
-    # Prioridad alta para que se procese antes que la regla de bloqueo.
     flow_allow_radius = {
         "switch": dpid,
         "name": f"qtn-allow-radius-{host_mac.replace(':', '')}",
         "cookie": "0",
         "priority": "33000",
-        "in_port": "*", # Se aplica a cualquier puerto de entrada del switch
-        "eth_type": "0x0800", # IPv4
-        "ipv4_dst": RADIUS_SERVER_IP,
-        "ip_proto": "0x11", # UDP
-        "udp_dst": "1812",
-        "eth_src": host_mac,
         "active": "true",
-        "actions": "output=normal" # 'normal' le dice al switch que use su pipeline de reenvío estándar (learning/STP)
+        "match": {
+            "eth_type": "0x0800",
+            "ip_proto": "0x11",
+            "eth_src": host_mac,
+            "ipv4_dst": RADIUS_SERVER_IP,
+            "udp_dst": "1812"
+        },
+        "instructions": [
+            {
+                "apply_actions": {
+                    "actions": "output=NORMAL"
+                }
+            }
+        ]
     }
 
     # Regla 2: Permitir tráfico ARP
-    # Prioridad media. Esencial para la resolución de direcciones.
     flow_allow_arp = {
         "switch": dpid,
         "name": f"qtn-allow-arp-{host_mac.replace(':', '')}",
         "cookie": "0",
         "priority": "32900",
-        "in_port": "*",
-        "eth_type": "0x0806", # ARP
-        "eth_src": host_mac,
         "active": "true",
-        "actions": "output=normal"
+        "match": {
+            "eth_type": "0x0806",
+            "eth_src": host_mac
+        },
+        "instructions": [
+            {
+                "apply_actions": {
+                    "actions": "output=NORMAL"
+                }
+            }
+        ]
     }
 
     # Regla 3: Bloquear todo el resto del tráfico de este host
-    # Prioridad baja para que sea la regla por defecto (catch-all).
-    # Una lista de acciones vacía significa "descartar el paquete".
     flow_drop_all = {
         "switch": dpid,
         "name": f"qtn-drop-all-{host_mac.replace(':', '')}",
         "cookie": "0",
         "priority": "32768",
-        "in_port": "*",
-        "eth_src": host_mac,
         "active": "true",
-        "actions": "" # ¡ACCIÓN DE DESCARTAR!
+        "match": {
+            "eth_src": host_mac
+        },
+        # Una lista de instrucciones vacía en OF1.3 significa descartar el paquete.
+        "instructions": []
     }
     
     # Instalar las reglas
@@ -136,9 +149,8 @@ def main():
     """
     Función principal del script.
     """
-    print("--- Script de Instalación de Flujos de Cuarentena SDN ---")
+    print("--- Script de Instalación de Flujos de Cuarentena SDN (Formato OF1.3) ---")
     
-    # Obtener el DPID para cada host y configurar la cuarentena
     for mac in HOSTS_A_BLOQUEAR:
         dpid = get_attachment_point(mac)
         if dpid:
