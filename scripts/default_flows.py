@@ -104,7 +104,7 @@ def setup_quarantine_for_host(host_mac, dpid):
     flow_allow_radius = {
         "switch": dpid,
         "name": f"qtn-allow-radius-{host_mac.replace(':', '')}",
-        "priority": "33000",
+        "priority": "3300",
         "active": "true",
         "eth_type": "0x0800",
         "ip_proto": "0x11",
@@ -120,7 +120,7 @@ def setup_quarantine_for_host(host_mac, dpid):
     flow_allow_arp = {
         "switch": dpid,
         "name": f"qtn-allow-arp-{host_mac.replace(':', '')}",
-        "priority": "32900",
+        "priority": "3290",
         "active": "true",
         "eth_type": "0x0806",
         "eth_src": host_mac,
@@ -131,7 +131,7 @@ def setup_quarantine_for_host(host_mac, dpid):
     flow_drop_all = {
         "switch": dpid,
         "name": f"qtn-drop-all-{host_mac.replace(':', '')}",
-        "priority": "32768",
+        "priority": "3276",
         "active": "true",
         "match": {
             "eth_src": host_mac
