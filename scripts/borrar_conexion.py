@@ -59,12 +59,18 @@ def main():
 
     # 2. Iterar sobre todos los switches y sus flujos para encontrar y borrar los que coincidan
     flows_found = 0
-    for dpid, flows in all_flows_by_dpid.items():
-        for flow_name in flows.keys():
-            if flow_name.startswith(flow_name_prefix):
-                flows_found += 1
-                print(f"  [+] Coincidencia encontrada en switch {dpid}: '{flow_name}'")
-                delete_flow(flow_name)
+    # all_flows_by_dpid es un diccionario donde la clave es el DPID
+    for dpid, flows_list in all_flows_by_dpid.items():
+        # **CORRECCIÓN DE LÓGICA**
+        # flows_list es una LISTA de diccionarios, no un diccionario.
+        # Cada elemento de la lista es un diccionario con una sola clave: el nombre del flujo.
+        for flow_dict in flows_list:
+            # Iteramos sobre el diccionario de un solo elemento para obtener el nombre.
+            for flow_name in flow_dict.keys():
+                if flow_name.startswith(flow_name_prefix):
+                    flows_found += 1
+                    print(f"  [+] Coincidencia encontrada en switch {dpid}: '{flow_name}'")
+                    delete_flow(flow_name)
     
     if flows_found == 0:
         print("\n[*] No se encontraron flujos de conexión para la MAC especificada.")
